@@ -10,6 +10,19 @@ export default defineConfig({
     cors: true,
     headers: {
       'X-Frame-Options': 'ALLOWALL'
+    },
+    proxy: {
+      '/api': {
+        target: 'http://localhost:12001',
+        changeOrigin: true,
+        secure: false
+      },
+      '/ws': {
+        target: 'ws://localhost:12001',
+        ws: true,
+        changeOrigin: true,
+        secure: false
+      }
     }
   },
   resolve: {

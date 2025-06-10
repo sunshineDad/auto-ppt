@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-PPT Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .demo-section {
+            margin: 20px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .btn {
+            background: #1976D2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #1565C0;
+        }
+        .slide-preview {
+            width: 300px;
+            height: 200px;
+            border: 1px solid #ccc;
+            margin: 10px;
+            display: inline-block;
+            background: white;
+            position: relative;
+        }
+        .api-status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+        .status-ok { background: #e8f5e9; color: #2e7d32; }
+        .status-error { background: #ffebee; color: #c62828; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 AI-Powered PPT Generation System</h1>
+            <p>Demonstration of 7 Atomic Operations</p>
+        </div>
+
+        <div class="demo-section">
+            <h3>System Status</h3>
+            <div id="backend-status" class="api-status">Checking backend connection...</div>
+            <div id="ai-status" class="api-status">Checking AI engine...</div>
+        </div>
+
+        <div class="demo-section">
+            <h3>Quick Demo: Create a Presentation</h3>
+            <button class="btn" onclick="createNewPresentation()">🆕 New Presentation</button>
+            <button class="btn" onclick="addTitleSlide()">📝 Add Title Slide</button>
+            <button class="btn" onclick="addContentSlide()">📊 Add Content Slide</button>
+            <button class="btn" onclick="addChartSlide()">📈 Add Chart Slide</button>
+            <button class="btn" onclick="applyTheme()">🎨 Apply Theme</button>
+        </div>
+
+        <div class="demo-section">
+            <h3>Atomic Operations Demo</h3>
+            <div id="operations-log" style="background: #f9f9f9; padding: 10px; height: 200px; overflow-y: auto; font-family: monospace; font-size: 12px;"></div>
+        </div>
+
+        <div class="demo-section">
+            <h3>Live Preview</h3>
+            <div id="slides-container">
+                <div class="slide-preview">
+                    <div style="padding: 20px; text-align: center;">
+                        <h4>Slide 1</h4>
+                        <p>Click buttons above to generate content</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:12001';
+        let currentPresentation = null;
+        let operationCount = 0;
+
+        // Check backend status
+        async function checkBackendStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                document.getElementById('backend-status').innerHTML = `✅ Backend: ${data.status} (v${data.version})`;
+                document.getElementById('backend-status').className = 'api-status status-ok';
+                
+                document.getElementById('ai-status').innerHTML = `🤖 AI Engine: ${data.ai_ready ? 'Ready' : 'Initializing'}`;
+                document.getElementById('ai-status').className = `api-status ${data.ai_ready ? 'status-ok' : 'status-error'}`;
+            } catch (error) {
+                document.getElementById('backend-status').innerHTML = `❌ Backend: Connection failed`;
+                document.getElementById('backend-status').className = 'api-status status-error';
+                document.getElementById('ai-status').innerHTML = `❌ AI Engine: Unavailable`;
+                document.getElementById('ai-status').className = 'api-status status-error';
+            }
+        }
+
+        // Log atomic operations
+        function logOperation(operation, result) {
+            operationCount++;
+            const log = document.getElementById('operations-log');
+            const timestamp = new Date().toLocaleTimeString();
+            log.innerHTML += `[${timestamp}] #${operationCount} ${operation.op} ${operation.type} → ${result ? 'Success' : 'Failed'}\n`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Send atomic operation to backend
+        async function sendOperation(operation) {
+            try {
+                const response = await fetch(`${API_BASE}/api/operations`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(operation)
+                });
+                const result = await response.json();
+                logOperation(operation, true);
+                return result;
+            } catch (error) {
+                logOperation(operation, false);
+                console.error('Operation failed:', error);
+                return null;
+            }
+        }
+
+        // Demo functions
+        async function createNewPresentation() {
+            currentPresentation = {
+                id: 'demo-' + Date.now(),
+                title: 'AI Generated Presentation',
+                slides: []
+            };
+            
+            const operation = {
+                op: 'CREATE',
+                type: 'presentation',
+                data: currentPresentation,
+                timestamp: Date.now()
+            };
+            
+            await sendOperation(operation);
+            updatePreview();
+        }
+
+        async function addTitleSlide() {
+            if (!currentPresentation) await createNewPresentation();
+            
+            // Create slide
+            const createSlideOp = {
+                op: 'CREATE',
+                type: 'slide',
+                data: { layout: 'title' },
+                timestamp: Date.now()
+            };
+            await sendOperation(createSlideOp);
+            
+            // Add title text
+            const addTitleOp = {
+                op: 'ADD',
+                type: 'text',
+                target: 0,
+                data: {
+                    content: 'AI-Powered Presentations',
+                    x: 100, y: 80,
+                    width: 600, height: 80,
+                    fontSize: 36,
+                    fontWeight: 'bold',
+                    textAlign: 'center'
+                },
+                timestamp: Date.now()
+            };
+            await sendOperation(addTitleOp);
+            
+            // Add subtitle
+            const addSubtitleOp = {
+                op: 'ADD',
+                type: 'text',
+                target: 0,
+                data: {
+                    content: 'Generated with 7 Atomic Operations',
+                    x: 100, y: 180,
+                    width: 600, height: 40,
+                    fontSize: 18,
+                    textAlign: 'center',
+                    color: '#666'
+                },
+                timestamp: Date.now()
+            };
+            await sendOperation(addSubtitleOp);
+            
+            updatePreview();
+        }
+
+        async function addContentSlide() {
+            if (!currentPresentation) await createNewPresentation();
+            
+            const createSlideOp = {
+                op: 'CREATE',
+                type: 'slide',
+                data: { layout: 'content' },
+                timestamp: Date.now()
+            };
+            await sendOperation(createSlideOp);
+            
+            const addContentOp = {
+                op: 'ADD',
+                type: 'text',
+                target: currentPresentation.slides.length,
+                data: {
+                    content: '• Autonomous generation\n• Smart learning\n• Real-time preview\n• 7 atomic operations',
+                    x: 100, y: 100,
+                    width: 600, height: 200,
+                    fontSize: 16,
+                    lineHeight: 1.6
+                },
+                timestamp: Date.now()
+            };
+            await sendOperation(addContentOp);
+            
+            updatePreview();
+        }
+
+        async function addChartSlide() {
+            if (!currentPresentation) await createNewPresentation();
+            
+            const createSlideOp = {
+                op: 'CREATE',
+                type: 'slide',
+                data: { layout: 'chart' },
+                timestamp: Date.now()
+            };
+            await sendOperation(createSlideOp);
+            
+            const addChartOp = {
+                op: 'ADD',
+                type: 'chart',
+                target: currentPresentation.slides.length,
+                data: {
+                    chartType: 'bar',
+                    data: {
+                        labels: ['Q1', 'Q2', 'Q3', 'Q4'],
+                        datasets: [{
+                            label: 'Performance',
+                            data: [30, 45, 60, 80],
+                            backgroundColor: '#1976D2'
+                        }]
+                    },
+                    x: 100, y: 100,
+                    width: 600, height: 300
+                },
+                timestamp: Date.now()
+            };
+            await sendOperation(addChartOp);
+            
+            updatePreview();
+        }
+
+        async function applyTheme() {
+            if (!currentPresentation) return;
+            
+            const applyThemeOp = {
+                op: 'APPLY',
+                type: 'theme',
+                data: {
+                    name: 'modern-blue',
+                    colors: {
+                        primary: '#1976D2',
+                        secondary: '#424242',
+                        background: '#FFFFFF'
+                    }
+                },
+                timestamp: Date.now()
+            };
+            await sendOperation(applyThemeOp);
+            
+            updatePreview();
+        }
+
+        function updatePreview() {
+            const container = document.getElementById('slides-container');
+            if (!currentPresentation) return;
+            
+            container.innerHTML = '';
+            for (let i = 0; i <= currentPresentation.slides.length; i++) {
+                const slide = document.createElement('div');
+                slide.className = 'slide-preview';
+                slide.innerHTML = `
+                    <div style="padding: 10px; text-align: center;">
+                        <h4>Slide ${i + 1}</h4>
+                        <p style="font-size: 12px;">Generated by AI</p>
+                    </div>
+                `;
+                container.appendChild(slide);
+            }
+        }
+
+        // Initialize
+        checkBackendStatus();
+        setInterval(checkBackendStatus, 10000); // Check every 10 seconds
+    </script>
+</body>
+</html>
