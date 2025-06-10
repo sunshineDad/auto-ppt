@@ -603,24 +603,333 @@ async def predict_next_atom(context):
     return await ai_model.predict_atom(context)
 ```
 
-## 🚀 Quick Start
+## 🚀 快速开始
+
+### 方式一：一键部署脚本（推荐）
 
 ```bash
-# Clone repository
-git clone https://github.com/your-org/ai-ppt-system.git
-cd ai-ppt-system
+# 克隆仓库
+git clone https://github.com/sunshineDad/auto-ppt.git
+cd auto-ppt
 
-# Environment setup
-cp .env.example .env
-# Configure: OPENAI_API_KEY, DATABASE_URL, REDIS_URL
+# 安装依赖
+npm install
+cd backend && pip install -r requirements.txt && cd ..
 
-# Development mode
+# 开发模式部署（本地访问）
+python deploy.py development
+
+# 生产模式部署（公网访问）
+python deploy.py production
+```
+
+### 方式二：Docker 部署（生产环境推荐）
+
+```bash
+# 克隆仓库
+git clone https://github.com/sunshineDad/auto-ppt.git
+cd auto-ppt
+
+# 使用 Docker Compose 启动
 docker-compose up -d
 
-# Access points
-# Frontend: http://localhost:3000
-# API: http://localhost:8000/docs
-# Monitoring: http://localhost:9090
+# 查看服务状态
+docker-compose ps
+
+# 查看日志
+docker-compose logs -f
+```
+
+### 方式三：手动部署
+
+```bash
+# 1. 安装前端依赖并构建
+npm install
+npm run build
+
+# 2. 安装后端依赖
+cd backend
+pip install -r requirements.txt
+
+# 3. 启动后端服务
+python main.py &
+
+# 4. 启动前端服务（新终端）
+cd ..
+python -m http.server 3000 --directory dist
+
+# 5. 访问应用
+# 前端: http://localhost:3000
+# 后端: http://localhost:8000
+```
+
+## 🌐 部署访问地址
+
+### 开发模式
+- 🖥️ **前端界面**: http://localhost:3000
+- 🔧 **后端API**: http://localhost:8000
+- 📚 **API文档**: http://localhost:8000/docs
+- 🎮 **交互演示**: `python demo.py`
+
+### 生产模式（公网访问）
+- 🌍 **公网前端**: http://YOUR_PUBLIC_IP:3000
+- 🔧 **公网API**: http://YOUR_PUBLIC_IP:8000
+- 📚 **API文档**: http://YOUR_PUBLIC_IP:8000/docs
+
+### Docker 部署
+- 🌐 **Nginx代理**: http://localhost (端口80)
+- 🔒 **HTTPS访问**: https://localhost (端口443，需配置SSL证书）
+- 📊 **Redis缓存**: localhost:6379
+
+## 📋 系统要求
+
+### 最低配置
+- **操作系统**: Linux/macOS/Windows
+- **Node.js**: 16.0+ 
+- **Python**: 3.8+
+- **内存**: 2GB RAM
+- **存储**: 1GB 可用空间
+
+### 推荐配置
+- **操作系统**: Ubuntu 20.04+ / CentOS 8+
+- **Node.js**: 18.0+
+- **Python**: 3.11+
+- **内存**: 4GB+ RAM
+- **存储**: 5GB+ 可用空间
+- **网络**: 稳定的互联网连接
+
+## 🔧 详细部署步骤
+
+### 1. 环境准备
+
+```bash
+# Ubuntu/Debian 系统
+sudo apt update
+sudo apt install -y nodejs npm python3 python3-pip git
+
+# CentOS/RHEL 系统  
+sudo yum install -y nodejs npm python3 python3-pip git
+
+# macOS 系统
+brew install node python git
+
+# Windows 系统
+# 请从官网下载安装 Node.js, Python, Git
+```
+
+### 2. 获取源码
+
+```bash
+# 克隆仓库
+git clone https://github.com/sunshineDad/auto-ppt.git
+cd auto-ppt
+
+# 切换到 MVP 分支
+git checkout mvp
+```
+
+### 3. 安装依赖
+
+```bash
+# 安装前端依赖
+npm install
+
+# 安装后端依赖
+cd backend
+pip install -r requirements.txt
+cd ..
+```
+
+### 4. 配置环境变量（可选）
+
+```bash
+# 创建环境配置文件
+cat > backend/.env << EOF
+# 数据库配置
+DATABASE_URL=sqlite+aiosqlite:///./ai_ppt_system.db
+
+# Redis 配置（可选，用于缓存）
+REDIS_URL=redis://localhost:6379
+
+# AI 配置
+AI_MIN_TRAINING_SAMPLES=10
+AI_LEARNING_RATE=0.001
+
+# API 配置
+API_HOST=0.0.0.0
+API_PORT=8000
+EOF
+```
+
+### 5. 构建和部署
+
+#### 开发模式（本地访问）
+```bash
+# 使用部署脚本
+python deploy.py development
+
+# 或手动启动
+npm run build
+cd backend && python main.py &
+cd .. && python -m http.server 3000 --directory dist
+```
+
+#### 生产模式（公网访问）
+```bash
+# 使用部署脚本（自动获取公网IP）
+python deploy.py production
+
+# 手动配置防火墙（Linux）
+sudo ufw allow 3000
+sudo ufw allow 8000
+
+# 手动配置防火墙（CentOS）
+sudo firewall-cmd --permanent --add-port=3000/tcp
+sudo firewall-cmd --permanent --add-port=8000/tcp
+sudo firewall-cmd --reload
+```
+
+### 6. Docker 部署（推荐生产环境）
+
+```bash
+# 安装 Docker 和 Docker Compose
+curl -fsSL https://get.docker.com -o get-docker.sh
+sudo sh get-docker.sh
+sudo pip install docker-compose
+
+# 启动服务
+docker-compose up -d
+
+# 查看服务状态
+docker-compose ps
+
+# 查看实时日志
+docker-compose logs -f ai-ppt-system
+
+# 停止服务
+docker-compose down
+```
+
+## 🔍 服务验证
+
+### 健康检查
+```bash
+# 检查后端健康状态
+curl http://localhost:8000/health
+
+# 检查前端是否可访问
+curl http://localhost:3000
+
+# 运行完整演示
+python demo.py
+```
+
+### 功能测试
+```bash
+# 测试 API 端点
+curl -X GET http://localhost:8000/api/operations/stats
+
+# 测试 WebSocket 连接
+# 在浏览器控制台运行：
+# const ws = new WebSocket('ws://localhost:8000/ws');
+# ws.onopen = () => console.log('WebSocket connected');
+```
+
+## 🚨 故障排除
+
+### 常见问题
+
+#### 1. 端口被占用
+```bash
+# 查看端口占用
+netstat -tulpn | grep :3000
+netstat -tulpn | grep :8000
+
+# 杀死占用进程
+sudo kill -9 <PID>
+
+# 或使用不同端口
+python -m http.server 3001 --directory dist
+```
+
+#### 2. 权限问题
+```bash
+# 给部署脚本执行权限
+chmod +x deploy.py
+
+# 使用 sudo 运行（如果需要）
+sudo python deploy.py production
+```
+
+#### 3. 依赖安装失败
+```bash
+# 清理 npm 缓存
+npm cache clean --force
+rm -rf node_modules package-lock.json
+npm install
+
+# 升级 pip
+pip install --upgrade pip
+pip install -r backend/requirements.txt
+```
+
+#### 4. 防火墙问题
+```bash
+# Ubuntu/Debian
+sudo ufw status
+sudo ufw allow 3000/tcp
+sudo ufw allow 8000/tcp
+
+# CentOS/RHEL
+sudo firewall-cmd --list-all
+sudo firewall-cmd --permanent --add-port=3000/tcp
+sudo firewall-cmd --permanent --add-port=8000/tcp
+sudo firewall-cmd --reload
+```
+
+#### 5. 数据库问题
+```bash
+# 删除数据库文件重新初始化
+rm backend/ai_ppt_system.db
+
+# 重启后端服务
+cd backend && python main.py
+```
+
+## 📊 监控和维护
+
+### 日志查看
+```bash
+# 查看后端日志
+tail -f backend/logs/app.log
+
+# 查看 Docker 日志
+docker-compose logs -f
+
+# 查看系统资源使用
+htop
+df -h
+```
+
+### 性能监控
+```bash
+# 检查服务状态
+curl http://localhost:8000/api/analytics/performance
+
+# 监控数据库大小
+ls -lh backend/ai_ppt_system.db
+
+# 监控内存使用
+free -h
+```
+
+### 备份数据
+```bash
+# 备份数据库
+cp backend/ai_ppt_system.db backup/ai_ppt_system_$(date +%Y%m%d).db
+
+# 备份配置文件
+tar -czf backup/config_$(date +%Y%m%d).tar.gz backend/.env nginx.conf
 ```
 
 ## 📊 Performance & Optimization
