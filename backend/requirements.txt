@@ -1,0 +1,13 @@
+fastapi>=0.100.0
+uvicorn[standard]>=0.20.0
+pydantic>=2.0.0
+sqlalchemy>=2.0.0
+aiosqlite>=0.19.0
+redis>=4.0.0
+python-multipart>=0.0.6
+python-dotenv>=1.0.0
+websockets>=11.0.0
+aiofiles>=23.0.0
+httpx>=0.24.0
+numpy>=1.21.0
+scikit-learn>=1.0.0
