@@ -42,22 +42,42 @@ class AtomicProcessor:
         start_time = datetime.utcnow()
         
         try:
-            # Create operation record
-            operation = AtomicOperation(
-                operation=operation_data.get('operation', {}).get('op', ''),
-                element_type=operation_data.get('operation', {}).get('type', ''),
-                target=str(operation_data.get('operation', {}).get('target', '')),
-                data=operation_data.get('operation', {}).get('data'),
-                timestamp=datetime.utcfromtimestamp(
-                    operation_data.get('operation', {}).get('timestamp', 0) / 1000
-                ),
-                user_id=operation_data.get('operation', {}).get('userId'),
-                session_id=operation_data.get('operation', {}).get('sessionId'),
-                presentation_id=operation_data.get('presentationId'),
-                slide_index=operation_data.get('slideIndex'),
-                context=operation_data.get('context'),
-                success=operation_data.get('result', {}).get('success', True)
-            )
+            # Handle both nested and flat operation data structures
+            if 'operation' in operation_data:
+                # Nested structure
+                op_data = operation_data['operation']
+                operation = AtomicOperation(
+                    operation=op_data.get('op', ''),
+                    element_type=op_data.get('type', ''),
+                    target=str(op_data.get('target', '')),
+                    data=op_data.get('data'),
+                    timestamp=datetime.utcfromtimestamp(
+                        op_data.get('timestamp', 0) / 1000 if op_data.get('timestamp') else datetime.utcnow().timestamp()
+                    ),
+                    user_id=op_data.get('userId'),
+                    session_id=op_data.get('sessionId'),
+                    presentation_id=operation_data.get('presentationId'),
+                    slide_index=operation_data.get('slideIndex'),
+                    context=operation_data.get('context'),
+                    success=operation_data.get('result', {}).get('success', True)
+                )
+            else:
+                # Flat structure (direct operation data)
+                operation = AtomicOperation(
+                    operation=operation_data.get('op', ''),
+                    element_type=operation_data.get('type', ''),
+                    target=str(operation_data.get('target', '')),
+                    data=operation_data.get('data'),
+                    timestamp=datetime.utcfromtimestamp(
+                        operation_data.get('timestamp', 0) / 1000 if operation_data.get('timestamp') else datetime.utcnow().timestamp()
+                    ),
+                    user_id=operation_data.get('userId'),
+                    session_id=operation_data.get('sessionId'),
+                    presentation_id=operation_data.get('presentationId'),
+                    slide_index=operation_data.get('slideIndex'),
+                    context=operation_data.get('context'),
+                    success=operation_data.get('success', True)
+                )
             
             # Calculate execution time
             processing_time = (datetime.utcnow() - start_time).total_seconds() * 1000
