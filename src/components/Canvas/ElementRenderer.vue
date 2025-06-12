@@ -452,7 +452,23 @@ function createChart() {
   if (props.element.type !== 'chart' || !chartContainer.value) return
   
   const el = props.element as any
-  const ctx = chartContainer.value.getContext('2d')
+  
+  // Ensure we have a canvas element
+  let canvas = chartContainer.value
+  if (!(canvas instanceof HTMLCanvasElement)) {
+    // If it's not a canvas, try to find one inside
+    canvas = chartContainer.value.querySelector('canvas')
+    if (!canvas) {
+      console.error('Chart container is not a canvas element and no canvas found inside')
+      return
+    }
+  }
+  
+  const ctx = canvas.getContext('2d')
+  if (!ctx) {
+    console.error('Failed to get 2D context from canvas')
+    return
+  }
   
   if (chartInstance.value) {
     chartInstance.value.destroy()
