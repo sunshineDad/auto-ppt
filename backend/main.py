@@ -98,6 +98,14 @@ async def record_operation(
         # Process the operation
         result = await atomic_processor.process_operation(operation_data, db)
         
+        # Ensure result is a dictionary
+        if not isinstance(result, dict):
+            result = {
+                "success": bool(result),
+                "operation_id": None,
+                "processing_time": 0
+            }
+        
         # Learn from the operation
         await ai_engine.learn_from_operation(operation_data, result)
         
@@ -318,6 +326,14 @@ async def update_presentation(
             db
         )
         return presentation
+    except ValueError as e:
+        # Handle missing presentation with 404 instead of 500
+        if "not found" in str(e).lower():
+            logger.warning(f"Presentation not found: {presentation_id}")
+            raise HTTPException(status_code=404, detail=f"Presentation {presentation_id} not found")
+        else:
+            logger.error(f"Failed to update presentation: {e}")
+            raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
         logger.error(f"Failed to update presentation: {e}")
         raise HTTPException(status_code=500, detail=str(e))
