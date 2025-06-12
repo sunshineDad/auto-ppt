@@ -210,6 +210,74 @@ class EnhancedAIEngine(AIEngine):
                 prompt, presentation_type, slide_count
             )
     
+    async def generate_presentation(self, prompt: str, slides: int = 5, theme: str = "professional") -> Dict[str, Any]:
+        """
+        Generate a complete PowerPoint presentation using DeepSeek AI
+        
+        Args:
+            prompt: User prompt for presentation content
+            slides: Number of slides to generate
+            theme: Presentation theme
+            
+        Returns:
+            Dict containing generated presentation data
+        """
+        try:
+            # Use the enhanced presentation generation
+            return await self.generate_presentation_with_ai(
+                prompt=prompt,
+                presentation_type=theme,
+                slide_count=slides,
+                style_preferences={"theme": theme},
+                content_requirements={"slides": slides}
+            )
+        except Exception as e:
+            logger.error(f"Presentation generation failed: {e}")
+            # Fallback to simple generation
+            return self._create_fallback_presentation(prompt, slides, theme)
+    
+    def _create_fallback_presentation(self, prompt: str, slides: int, theme: str) -> Dict[str, Any]:
+        """Create a simple fallback presentation"""
+        operations = []
+        
+        for i in range(slides):
+            # Create slide
+            operations.append({
+                "op": "CREATE",
+                "type": "slide",
+                "target": i,
+                "data": {"layout": "title_content", "theme": theme}
+            })
+            
+            # Add title
+            title = f"Slide {i + 1}: {prompt}" if i == 0 else f"Topic {i}"
+            operations.append({
+                "op": "ADD",
+                "type": "text",
+                "target": i,
+                "data": {
+                    "content": title,
+                    "x": 100,
+                    "y": 100,
+                    "width": 800,
+                    "height": 80,
+                    "fontSize": 32,
+                    "fontFamily": "Arial",
+                    "color": "#333333",
+                    "style": "heading"
+                }
+            })
+        
+        return {
+            "title": f"Presentation: {prompt}",
+            "operations": operations,
+            "metadata": {
+                "generated_by": "fallback",
+                "slides_count": slides,
+                "timestamp": datetime.utcnow().isoformat()
+            }
+        }
+    
     async def optimize_presentation_design(
         self,
         presentation_data: Dict[str, Any],

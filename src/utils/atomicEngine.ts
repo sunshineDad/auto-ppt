@@ -6,10 +6,12 @@
  */
 
 import { v4 as uuidv4 } from 'uuid'
+import { 
+  AtomicOperation, 
+  ElementType
+} from '@/types/atoms'
 import type { 
   AtomicOperationData, 
-  AtomicOperation, 
-  ElementType,
   AddTextData,
   AddImageData,
   AddShapeData,
@@ -574,7 +576,7 @@ export class AtomicEngine {
     return {
       totalOperations: this.operationHistory.length,
       averageExecutionTime: '< 10ms', // This would be calculated from actual measurements
-      memoryUsage: process.memoryUsage?.() || 'N/A'
+      memoryUsage: typeof window !== 'undefined' ? 'Browser Environment' : 'N/A'
     }
   }
 }

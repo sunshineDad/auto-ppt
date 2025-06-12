@@ -18,15 +18,17 @@ import logging
 from database import get_db, init_db
 from models import *
 from ai_engine import AIEngine
+from enhanced_ai_engine import EnhancedAIEngine
 from atomic_processor import AtomicProcessor
 from websocket_manager import WebSocketManager, start_cleanup_task
+from config import config
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Initialize components
-ai_engine = AIEngine()
+ai_engine = EnhancedAIEngine()
 atomic_processor = AtomicProcessor()
 websocket_manager = WebSocketManager()
 
@@ -35,8 +37,17 @@ async def lifespan(app: FastAPI):
     """Application lifespan manager"""
     # Startup
     logger.info("🎯 Starting AI-PPT System Backend...")
+    
+    # Validate configuration
+    if not config.validate_config():
+        raise RuntimeError("Configuration validation failed")
+    
     await init_db()
-    await ai_engine.initialize()
+    
+    # Initialize enhanced AI engine with DeepSeek provider
+    ai_config = config.get_ai_providers_config()
+    await ai_engine.initialize_enhanced(ai_config)
+    
     start_cleanup_task()  # Start WebSocket cleanup task
     logger.info("✅ Backend initialized successfully")
     
@@ -239,6 +250,30 @@ async def get_ai_metrics():
         return metrics
     except Exception as e:
         logger.error(f"Failed to get AI metrics: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/ai/generate-ppt")
+async def generate_ppt(request: Dict[str, Any]):
+    """Generate a complete PowerPoint presentation using DeepSeek AI"""
+    try:
+        prompt = request.get("prompt", "")
+        slides = request.get("slides", 5)
+        theme = request.get("theme", "professional")
+        
+        if not prompt:
+            raise HTTPException(status_code=400, detail="Prompt is required")
+        
+        # Use the enhanced AI engine to generate PPT with DeepSeek
+        result = await ai_engine.generate_presentation(prompt, slides, theme)
+        
+        return {
+            "success": True,
+            "presentation": result,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"PPT generation failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 # Presentation Management Endpoints
@@ -461,12 +496,60 @@ async def import_from_pptx(file_data: Dict[str, Any], db = Depends(get_db)):
         logger.error(f"PPTX import failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+# Serve static files (frontend) - Mount last to avoid conflicts with API routes
+import os
+dist_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "dist")
+if os.path.exists(dist_path):
+    # Mount static files with lower priority than API routes
+    from fastapi.responses import FileResponse
+    
+    @app.get("/")
+    async def serve_frontend():
+        return FileResponse(os.path.join(dist_path, "index.html"))
+    
+    # Serve static assets
+    app.mount("/assets", StaticFiles(directory=os.path.join(dist_path, "assets")), name="assets")
+    
+    # Serve specific static files
+    @app.get("/vite.svg")
+    async def serve_vite_svg():
+        svg_path = os.path.join(dist_path, "vite.svg")
+        if os.path.exists(svg_path):
+            return FileResponse(svg_path)
+        # Return a simple SVG if file doesn't exist
+        from fastapi.responses import Response
+        return Response(
+            content='<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="#646cff"/></svg>',
+            media_type="image/svg+xml"
+        )
+    
+    @app.get("/favicon.ico")
+    async def serve_favicon():
+        favicon_path = os.path.join(dist_path, "favicon.ico")
+        if os.path.exists(favicon_path):
+            return FileResponse(favicon_path)
+        # Fallback to vite.svg
+        svg_path = os.path.join(dist_path, "vite.svg")
+        if os.path.exists(svg_path):
+            return FileResponse(svg_path)
+        # Return simple SVG
+        from fastapi.responses import Response
+        return Response(
+            content='<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="#646cff"/></svg>',
+            media_type="image/svg+xml"
+        )
+    logger.info(f"✅ Serving frontend from {dist_path}")
+else:
+    logger.warning(f"⚠️ Frontend dist directory not found at {dist_path}")
+
 if __name__ == "__main__":
     # Development server
+    import os
+    port = int(os.getenv("API_PORT", 12001))
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
+        port=port,
         reload=True,
         log_level="info"
     )

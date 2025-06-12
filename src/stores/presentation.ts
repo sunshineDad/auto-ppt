@@ -16,10 +16,12 @@ import type {
   CanvasState,
   EditorState 
 } from '@/types/slides'
-import type { 
-  AtomicOperationData, 
+import { 
   AtomicOperation,
   ElementType 
+} from '@/types/atoms'
+import type { 
+  AtomicOperationData
 } from '@/types/atoms'
 
 export const usePresentationStore = defineStore('presentation', () => {
