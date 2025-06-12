@@ -51,11 +51,17 @@
     <div
       v-else-if="element.type === 'chart'"
       class="chart-element"
+      :style="{ width: '100%', height: '100%' }"
     >
       <canvas
         ref="chartContainer"
         :width="element.width || 400"
         :height="element.height || 300"
+        :style="{ 
+          width: '100%', 
+          height: '100%',
+          display: 'block'
+        }"
       ></canvas>
     </div>
     
@@ -465,6 +471,13 @@ function createChart() {
     return
   }
   
+  // Wait for canvas to be properly mounted
+  if (!canvas.offsetParent && canvas.offsetWidth === 0 && canvas.offsetHeight === 0) {
+    // Canvas not yet in DOM, retry after next tick
+    nextTick(() => createChart())
+    return
+  }
+  
   const ctx = canvas.getContext('2d')
   if (!ctx) {
     console.error('Failed to get 2D context from canvas')
@@ -473,8 +486,18 @@ function createChart() {
   
   // Destroy existing chart instance
   if (chartInstance.value) {
-    chartInstance.value.destroy()
+    try {
+      chartInstance.value.destroy()
+    } catch (e) {
+      console.warn('Error destroying chart:', e)
+    }
     chartInstance.value = null
+  }
+  
+  // Ensure canvas has proper dimensions
+  if (canvas.width === 0 || canvas.height === 0) {
+    canvas.width = el.width || 400
+    canvas.height = el.height || 300
   }
   
   try {
@@ -491,6 +514,9 @@ function createChart() {
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        animation: {
+          duration: 0 // Disable animations to prevent context issues
+        },
         plugins: {
           legend: {
             display: true
@@ -524,7 +550,12 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (chartInstance.value) {
-    chartInstance.value.destroy()
+    try {
+      chartInstance.value.destroy()
+    } catch (e) {
+      console.warn('Error destroying chart on unmount:', e)
+    }
+    chartInstance.value = null
   }
 })
 </script>
