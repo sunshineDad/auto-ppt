@@ -51,8 +51,13 @@
     <div
       v-else-if="element.type === 'chart'"
       class="chart-element"
-      ref="chartContainer"
-    ></div>
+    >
+      <canvas
+        ref="chartContainer"
+        :width="element.width || 400"
+        :height="element.height || 300"
+      ></canvas>
+    </div>
     
     <!-- Table Element -->
     <table
@@ -456,12 +461,8 @@ function createChart() {
   // Ensure we have a canvas element
   let canvas = chartContainer.value
   if (!(canvas instanceof HTMLCanvasElement)) {
-    // If it's not a canvas, try to find one inside
-    canvas = chartContainer.value.querySelector('canvas')
-    if (!canvas) {
-      console.error('Chart container is not a canvas element and no canvas found inside')
-      return
-    }
+    console.error('Chart container is not a canvas element')
+    return
   }
   
   const ctx = canvas.getContext('2d')
@@ -470,19 +471,37 @@ function createChart() {
     return
   }
   
+  // Destroy existing chart instance
   if (chartInstance.value) {
     chartInstance.value.destroy()
+    chartInstance.value = null
   }
   
-  chartInstance.value = new Chart(ctx, {
-    type: el.chartType,
-    data: el.data,
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      ...el.options
-    }
-  })
+  try {
+    chartInstance.value = new Chart(ctx, {
+      type: el.chartType || 'bar',
+      data: el.data || {
+        labels: ['Sample'],
+        datasets: [{
+          label: 'Data',
+          data: [1],
+          backgroundColor: '#3498db'
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true
+          }
+        },
+        ...el.options
+      }
+    })
+  } catch (error) {
+    console.error('Failed to create chart:', error)
+  }
 }
 
 // Watchers
