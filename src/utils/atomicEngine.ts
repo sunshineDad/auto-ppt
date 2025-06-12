@@ -574,7 +574,7 @@ export class AtomicEngine {
     return {
       totalOperations: this.operationHistory.length,
       averageExecutionTime: '< 10ms', // This would be calculated from actual measurements
-      memoryUsage: process.memoryUsage?.() || 'N/A'
+      memoryUsage: typeof window !== 'undefined' ? 'Browser Environment' : 'N/A'
     }
   }
 }
