@@ -6,10 +6,12 @@
  */
 
 import { v4 as uuidv4 } from 'uuid'
+import { 
+  AtomicOperation, 
+  ElementType
+} from '@/types/atoms'
 import type { 
   AtomicOperationData, 
-  AtomicOperation, 
-  ElementType,
   AddTextData,
   AddImageData,
   AddShapeData,
