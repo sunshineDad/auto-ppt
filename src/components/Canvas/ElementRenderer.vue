@@ -1,5 +1,21 @@
 <template>
+  <!-- Use new AtomicRenderer for enhanced functionality -->
+  <AtomicRenderer
+    v-if="useNewRenderer"
+    :component="convertToVisualComponent(element)"
+    :selected="selected"
+    :editing="isEditing"
+    :zoom="zoom"
+    @update="handleVisualUpdate"
+    @select="handleSelect"
+    @edit="handleEdit"
+    @delete="handleDelete"
+    @duplicate="handleDuplicate"
+  />
+  
+  <!-- Fallback to legacy renderer -->
   <div
+    v-else
     class="element-renderer"
     :class="{ 
       'selected': selected,
@@ -136,6 +152,9 @@
 import { ref, computed, onMounted, onUnmounted, nextTick, watch } from 'vue'
 import type { PPTElement } from '@/types/slides'
 import { Chart, registerables } from 'chart.js'
+import AtomicRenderer from '../Visual/Core/AtomicRenderer.vue'
+import type { VisualComponent, TextComponent, ImageComponent, ShapeComponent, ChartComponent, TableComponent } from '../Visual/Types/ComponentTypes'
+import { ElementType } from '@/types/atoms'
 
 Chart.register(...registerables)
 
@@ -163,6 +182,152 @@ const resizeStart = ref({ x: 0, y: 0, width: 0, height: 0, handle: '' })
 const rotationStart = ref({ x: 0, y: 0, rotation: 0 })
 const chartContainer = ref<HTMLElement>()
 const chartInstance = ref<Chart | null>(null)
+
+// New visual component system integration
+const useNewRenderer = ref(true) // Toggle to enable new renderer
+const visualComponent = ref<VisualComponent | null>(null)
+
+// Convert legacy element to visual component
+function convertToVisualComponent(element: PPTElement): VisualComponent {
+  const baseComponent = {
+    id: element.id,
+    type: element.type as ElementType,
+    x: element.left || 0,
+    y: element.top || 0,
+    width: element.width || 100,
+    height: element.height || 100,
+    rotation: element.rotation || 0,
+    opacity: element.opacity || 1,
+    zIndex: element.zIndex || 1,
+    locked: false,
+    visible: true,
+    metadata: {
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      version: '1.0.0'
+    }
+  }
+
+  switch (element.type) {
+    case 'text':
+      return {
+        ...baseComponent,
+        content: element.content || 'Text',
+        style: {
+          fontSize: element.fontSize || 16,
+          fontFamily: element.fontFamily || 'Inter, sans-serif',
+          fontWeight: element.bold ? 'bold' : 'normal',
+          fontStyle: element.italic ? 'italic' : 'normal',
+          color: element.color || '#000000',
+          textAlign: element.align || 'left',
+          verticalAlign: 'top',
+          lineHeight: 1.4,
+          textDecoration: element.underline ? 'underline' : 'none'
+        },
+        editable: true
+      } as TextComponent
+
+    case 'image':
+      return {
+        ...baseComponent,
+        src: element.src || '',
+        alt: element.alt || 'Image',
+        style: {
+          objectFit: 'cover',
+          objectPosition: 'center',
+          borderRadius: 0
+        }
+      } as ImageComponent
+
+    case 'shape':
+      return {
+        ...baseComponent,
+        shape: element.shape || 'rectangle',
+        style: {
+          fill: element.fill || '#3498db',
+          stroke: element.stroke || '#2980b9',
+          strokeWidth: element.strokeWidth || 2,
+          cornerRadius: element.cornerRadius || 0
+        }
+      } as ShapeComponent
+
+    case 'chart':
+      return {
+        ...baseComponent,
+        chartType: element.chartType || 'bar',
+        data: element.data || { labels: [], datasets: [] },
+        options: element.options || {},
+        style: {
+          backgroundColor: '#ffffff',
+          borderRadius: 8
+        }
+      } as ChartComponent
+
+    case 'table':
+      return {
+        ...baseComponent,
+        data: element.data || { headers: [], rows: [] },
+        style: {
+          variant: 'modern',
+          headerStyle: {
+            backgroundColor: '#f8f9fa',
+            color: '#2c3e50',
+            fontWeight: 'bold',
+            textAlign: 'left',
+            padding: { top: 12, right: 16, bottom: 12, left: 16 }
+          },
+          cellStyle: {
+            backgroundColor: '#ffffff',
+            color: '#2c3e50',
+            textAlign: 'left',
+            padding: { top: 8, right: 16, bottom: 8, left: 16 }
+          },
+          borderCollapse: 'collapse'
+        }
+      } as TableComponent
+
+    default:
+      return baseComponent as VisualComponent
+  }
+}
+
+// Handle visual component updates
+function handleVisualUpdate(component: VisualComponent, changes: Partial<VisualComponent>) {
+  // Convert back to legacy format for compatibility
+  const legacyChanges: any = {}
+  
+  if (changes.x !== undefined) legacyChanges.left = changes.x
+  if (changes.y !== undefined) legacyChanges.top = changes.y
+  if (changes.width !== undefined) legacyChanges.width = changes.width
+  if (changes.height !== undefined) legacyChanges.height = changes.height
+  if (changes.rotation !== undefined) legacyChanges.rotation = changes.rotation
+  if (changes.opacity !== undefined) legacyChanges.opacity = changes.opacity
+  if (changes.zIndex !== undefined) legacyChanges.zIndex = changes.zIndex
+  
+  // Handle type-specific changes
+  if (component.type === ElementType.TEXT && 'content' in changes) {
+    legacyChanges.content = (changes as any).content
+  }
+  
+  emit('update', component.id, legacyChanges)
+}
+
+function handleSelect(component: VisualComponent) {
+  emit('select', component.id)
+}
+
+function handleEdit(component: VisualComponent) {
+  isEditing.value = true
+}
+
+function handleDelete(component: VisualComponent) {
+  emit('delete', component.id)
+}
+
+function handleDuplicate(component: VisualComponent) {
+  // Emit a duplicate event or handle duplication logic
+  console.log('Duplicate component:', component.id)
+}
 
 // Computed styles
 const elementStyle = computed(() => ({
