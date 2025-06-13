@@ -42,21 +42,33 @@ class AtomicProcessor:
         start_time = datetime.utcnow()
         
         try:
-            # Create operation record
+            # Validate operation data
+            if not operation_data or not isinstance(operation_data, dict):
+                raise ValueError("Invalid operation data")
+            
+            # Extract operation details with proper defaults
+            op = operation_data.get('op', '')
+            op_type = operation_data.get('type', '')
+            target = operation_data.get('target', '')
+            data = operation_data.get('data', {})
+            
+            # Ensure data is a dictionary
+            if not isinstance(data, dict):
+                data = {}
+            
+            # Create operation record with safe defaults
             operation = AtomicOperation(
-                operation=operation_data.get('operation', {}).get('op', ''),
-                element_type=operation_data.get('operation', {}).get('type', ''),
-                target=str(operation_data.get('operation', {}).get('target', '')),
-                data=operation_data.get('operation', {}).get('data'),
-                timestamp=datetime.utcfromtimestamp(
-                    operation_data.get('operation', {}).get('timestamp', 0) / 1000
-                ),
-                user_id=operation_data.get('operation', {}).get('userId'),
-                session_id=operation_data.get('operation', {}).get('sessionId'),
+                operation=op,
+                element_type=op_type,
+                target=str(target),
+                data=data,
+                timestamp=datetime.utcnow(),
+                user_id=operation_data.get('userId'),
+                session_id=operation_data.get('sessionId'),
                 presentation_id=operation_data.get('presentationId'),
-                slide_index=operation_data.get('slideIndex'),
-                context=operation_data.get('context'),
-                success=operation_data.get('result', {}).get('success', True)
+                slide_index=operation_data.get('slideIndex', 0),
+                context=operation_data.get('context', {}),
+                success=True
             )
             
             # Calculate execution time
@@ -211,11 +223,14 @@ class AtomicProcessor:
     async def get_presentation(self, presentation_id: str, db: AsyncSession) -> Optional[Dict[str, Any]]:
         """Get a presentation by ID"""
         try:
-            # Try cache first
+            # Try cache first (graceful failure)
             cache_key = f"presentation_{presentation_id}"
-            cached = await self.cache.get(cache_key)
-            if cached:
-                return json.loads(cached)
+            try:
+                cached = await self.cache.get(cache_key)
+                if cached:
+                    return json.loads(cached)
+            except Exception as cache_error:
+                logger.warning(f"Failed to get from cache: {cache_error}")
             
             # Query database
             result = await db.execute(
@@ -225,8 +240,11 @@ class AtomicProcessor:
             
             if presentation:
                 data = presentation.to_dict()
-                # Cache for 1 hour
-                await self.cache.set(cache_key, json.dumps(data), expire=3600)
+                # Cache for 1 hour (graceful failure)
+                try:
+                    await self.cache.set(cache_key, json.dumps(data), expire=3600)
+                except Exception as cache_error:
+                    logger.warning(f"Failed to set cache: {cache_error}")
                 return data
             
             return None
@@ -265,9 +283,12 @@ class AtomicProcessor:
             await db.commit()
             await db.refresh(presentation)
             
-            # Invalidate cache
-            cache_key = f"presentation_{presentation_id}"
-            await self.cache.delete(cache_key)
+            # Invalidate cache (graceful failure)
+            try:
+                cache_key = f"presentation_{presentation_id}"
+                await self.cache.delete(cache_key)
+            except Exception as cache_error:
+                logger.warning(f"Failed to invalidate cache for presentation {presentation_id}: {cache_error}")
             
             logger.info(f"Updated presentation {presentation_id}")
             return presentation.to_dict()
